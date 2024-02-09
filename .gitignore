@@ -1,0 +1,5 @@
+/.idea/*
+!/.idea/watcherTasks.xml
+__pycache__/
+.coverage
+.tmp/
