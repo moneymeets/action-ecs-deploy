@@ -1,0 +1,43 @@
+name: Get image URI
+description: Get image uri from AWS ECR
+
+inputs:
+  ecr_repository:
+    description: ECR repository to pull image from
+    required: true
+  aws_region:
+    description: AWS region
+    required: true
+
+outputs:
+  image-uri:
+    description: "Image URI"
+    value: ${{ steps.get-image-uri.outputs.image-uri }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+
+    - name: Get Image URI
+      shell: bash
+      id: get-image-uri
+      run: |
+        imageTag=master-${{ github.sha }}
+        IMAGE_TAGS=$(
+          aws ecr describe-images \
+          --repository-name ${{ inputs.ecr_repository }} \
+          --image-ids imageTag="${imageTag}" \
+          --query 'imageDetails[*].imageTags[0]' \
+          --output json \
+          --region ${{ inputs.aws_region }}
+        )
+        REPOSITORY_URI=$(
+          aws ecr describe-repositories \
+          --repository-name ${{ inputs.ecr_repository }} \
+          --query 'repositories[0].repositoryUri' \
+          --output text \
+          --region ${{ inputs.aws_region }}
+        )
+        IMAGE_URI=$(jq --arg uri "${REPOSITORY_URI}" '.[] | ($uri + ":" + .)' <<< "${IMAGE_TAGS}")
+        echo "image-uri=${IMAGE_URI}" >> $GITHUB_OUTPUT
