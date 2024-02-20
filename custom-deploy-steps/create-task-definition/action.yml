@@ -65,7 +65,8 @@ runs:
     - name: Replace PLACEHOLDER in task definition with image URI
       shell: bash
       run: |
-        jq --arg image_uri "${{ inputs.image_uri }}" '.containerDefinitions[].image |= $image_uri' \
+        jq --arg image_uri "${{ inputs.image_uri }}" \
+          '.containerDefinitions[].image |= $image_uri | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)' \
           task-definition.json > tmpfile && mv tmpfile task-definition.json
     
     - name: Get latest active task definition created by GitHub Actions deployment
