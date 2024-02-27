@@ -20,6 +20,7 @@ inputs:
 
 runs:
   using: "composite"
+
   steps:
     - uses: actions/checkout@v4
 
@@ -58,7 +59,7 @@ runs:
         aws_region: ${{ inputs.aws_region }}
 
     - name: Render and deploy task definition to Amazon ECS
-      id: deploy-task-definition
+      id: deploy-production-task-definition
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
       with:
         application_id: ${{ inputs.ecr_repository }}-${{ inputs.environment }}
@@ -72,45 +73,65 @@ runs:
       shell: bash
       run: |
         aws ecs update-service \
-          --health-check-grace-period-seconds 900 \
-          --task-definition "${{ steps.deploy-task-definition.outputs.latest-task-definition-arn }}" \
-          --cluster ${{ inputs.environment }} \
-          --service ${{ inputs.ecr_repository }}-${{ inputs.environment }} \
+          --task-definition "${{ steps.deploy-production-task-definition.outputs.latest-task-definition-arn }}" \
           --desired-count 1 \
-          --region ${{ inputs.aws_region }}
+          --cluster ${{ inputs.environment }} \
+          --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
+    # https://docs.aws.amazon.com/cli/latest/reference/ecs/wait/services-stable.html
     - name: Await service stability
       shell: bash
-      # ToDo: MD-7199 Re-evaluate logic after deployment failures are correctly handled by ECS
       id: check-service-stability
       run: |
         aws ecs wait services-stable \
           --cluster ${{ inputs.environment }} \
-          --service ${{ inputs.ecr_repository }}-${{ inputs.environment }} \
-          --region ${{ inputs.aws_region }}
+          --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
-    - name: Deregister previous local-exec task definition
-      if: ${{ always() && steps.deploy-local-task-definition.outputs.previous-task-definition-arn != '' }}
+    - name: Determine which pair of task definitions should be deregistered
+      if: always()
+      shell: bash
+      id: determine-task-definitions-to-deregister
+      env:
+        PREVIOUS_PRODUCTION_TASK_DEFINITION: ${{ steps.deploy-production-task-definition.outputs.previous-task-definition-arn }}
+        LATEST_PRODUCTION_TASK_DEFINITION: ${{ steps.deploy-production-task-definition.outputs.latest-task-definition-arn }}
+      run: |
+        PRIMARY_DEPLOYMENT_DEFINITION_ARN=$(
+          aws ecs describe-services \
+            --cluster ${{ inputs.environment }} \
+            --services ${{ inputs.ecr_repository }}-${{ inputs.environment }} \
+            | jq -r '.services[].deployments[] | select(.status == "PRIMARY") | .taskDefinition'
+        )
+        
+        if [[ "$PRIMARY_DEPLOYMENT_DEFINITION_ARN" == "$LATEST_PRODUCTION_TASK_DEFINITION" ]]; then  
+              # Do not deregister task definition for initial deployment
+              if [ ! -z "$PREVIOUS_PRODUCTION_TASK_DEFINITION" ]; then   
+                echo "task-definition-production=$PREVIOUS_PRODUCTION_TASK_DEFINITION" >> $GITHUB_OUTPUT
+                echo "task-definition-local=${{ steps.deploy-local-task-definition.outputs.previous-task-definition-arn }}" >> $GITHUB_OUTPUT
+                echo "fail-pipeline=false" >> $GITHUB_OUTPUT
+              fi
+        else
+            echo "task-definition-production=$LATEST_PRODUCTION_TASK_DEFINITION" >> $GITHUB_OUTPUT
+            echo "task-definition-local=${{ steps.deploy-local-task-definition.outputs.latest-task-definition-arn }}" >> $GITHUB_OUTPUT
+            echo "fail-pipeline=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Deregister production task definition
+      if: ${{ always() && steps.deploy-production-task-definition.outcome == 'success' }}
       shell: bash
       run: |
-        if [ "${{ steps.check-service-stability.outcome }}" == 'success' ]; then
-            TASK_DEFINITION_TO_DEREGISTER="${{ steps.deploy-local-task-definition.outputs.previous-task-definition-arn }}"
-        else
-            TASK_DEFINITION_TO_DEREGISTER="${{ steps.deploy-local-task-definition.outputs.latest-task-definition-arn }}"
-        fi
         aws ecs deregister-task-definition \
-          --task-definition "$TASK_DEFINITION_TO_DEREGISTER" \
-          --region ${{ inputs.aws_region }}
+          --task-definition "${{ steps.determine-task-definitions-to-deregister.outputs.task-definition-production }}"
 
-    - name: Deregister previous task definition
-      if: ${{ always() && steps.deploy-task-definition.outputs.previous-task-definition-arn != '' }}
+    - name: Deregister local task definition
+      if: ${{ always() && steps.deploy-local-task-definition.outcome == 'success' }}
       shell: bash
       run: |
-        if [ "${{ steps.check-service-stability.outcome }}" == 'success' ]; then
-            TASK_DEFINITION_TO_DEREGISTER="${{ steps.deploy-task-definition.outputs.previous-task-definition-arn }}"
-        else
-            TASK_DEFINITION_TO_DEREGISTER="${{ steps.deploy-task-definition.outputs.latest-task-definition-arn }}"
-        fi
         aws ecs deregister-task-definition \
-          --task-definition "$TASK_DEFINITION_TO_DEREGISTER" \
-          --region ${{ inputs.aws_region }}
+          --task-definition "${{ steps.determine-task-definitions-to-deregister.outputs.task-definition-local }}"
+
+    - name: Fail pipeline
+      if: ${{ always() && steps.determine-task-definitions-to-deregister.outputs.fail-pipeline == 'true'  }}
+      shell: bash
+      run: |
+        echo "::error::Deployment failed; rollback triggered"
+        exit 1
