@@ -23,7 +23,7 @@ runs:
       shell: bash
       id: get-image-uri
       run: |
-        imageTag=master-${{ github.sha }}
+        imageTag=$(echo ${{ github.ref_name }} | awk '{print tolower($0)}' | sed -e 's|/|-|g')
         IMAGE_TAGS=$(
           aws ecr describe-images \
           --repository-name ${{ inputs.ecr_repository }} \

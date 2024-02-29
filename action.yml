@@ -46,14 +46,14 @@ runs:
         poetry_cache_enabled: 'false'
 
     - id: get-image-uri
-      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@master
+      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@feature/deploy-from-feature-branch
       with:
         ecr_repository: ${{ inputs.ecr_repository }}
         aws_region: ${{ inputs.aws_region }}
 
     - name: Render and deploy local-exec task definition to Amazon ECS
       id: deploy-local-task-definition
-      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
+      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@feature/deploy-from-feature-branch
       with:
         application_id: ${{ inputs.ecr_repository }}-local-exec-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
@@ -64,7 +64,7 @@ runs:
 
     - name: Render and deploy task definition to Amazon ECS
       id: deploy-production-task-definition
-      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
+      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@feature/deploy-from-feature-branch
       with:
         application_id: ${{ inputs.ecr_repository }}-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
