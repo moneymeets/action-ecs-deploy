@@ -8,6 +8,9 @@ inputs:
   image_uri:
     description: The URI of the container image to insert into the ECS task definition
     required: true
+  deployment_tag:
+    description: Github Actions deployment tag
+    required: true
 
   aws_access_key_id:
     description: AWS access key
@@ -74,11 +77,12 @@ runs:
       shell: bash
       env:
         APPLICATION_ID: ${{ inputs.application_id }}
+        DEPLOYMENT_TAG: ${{ inputs.deployment_tag }}
       run: |
         TASK_DEFINITION_ARN=$(
           poetry run --directory ${{ github.action_path }} actions_helper get-active-task-definition-arn-by-tag \
             --application-id "$APPLICATION_ID" \
-            --tags "created_by:GitHub Actions Deployment,Name:$APPLICATION_ID" \
+            --tags "created_by:$DEPLOYMENT_TAG,Name:$APPLICATION_ID" \
             --aws-region "$AWS_REGION" \
             --allow-initial-deployment
         )
@@ -91,8 +95,11 @@ runs:
 
     - name: Add tags to the new task definition revision
       shell: bash
+      env:
+        APPLICATION_ID: ${{ inputs.application_id }}
+        DEPLOYMENT_TAG: ${{ inputs.deployment_tag }}
       run: |
         aws ecs tag-resource \
           --resource-arn ${{ steps.deploy-task-definition.outputs.task-definition-arn }} \
-          --tags key=created_by,value='GitHub Actions Deployment' key=Name,value=${{ inputs.application_id }} \
+          --tags key=created_by,value=$DEPLOYMENT_TAG key=Name,value=$APPLICATION_ID \
           --region ${{ inputs.aws_region }}
