@@ -7,6 +7,9 @@ inputs:
   ecr_repository:
     description: ECR repository to pull image from
     required: true
+  deployment_tag:
+    description: Github Action deployment tag
+    required: true
 
   aws_access_key_id:
     description: AWS access key
@@ -54,6 +57,7 @@ runs:
       with:
         application_id: ${{ inputs.ecr_repository }}-local-exec-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
+        deployment_tag: ${{ inputs.deployment_tag }}
         aws_access_key_id: ${{ inputs.aws_access_key_id }}
         aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
         aws_region: ${{ inputs.aws_region }}
@@ -64,6 +68,7 @@ runs:
       with:
         application_id: ${{ inputs.ecr_repository }}-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
+        deployment_tag: ${{ inputs.deployment_tag }}
         aws_access_key_id: ${{ inputs.aws_access_key_id }}
         aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
         aws_region: ${{ inputs.aws_region }}
