@@ -101,5 +101,5 @@ runs:
       run: |
         aws ecs tag-resource \
           --resource-arn ${{ steps.deploy-task-definition.outputs.task-definition-arn }} \
-          --tags key=created_by,value=$DEPLOYMENT_TAG key=Name,value=$APPLICATION_ID \
+          --tags key=created_by,value="$DEPLOYMENT_TAG" key=Name,value="$APPLICATION_ID" \
           --region ${{ inputs.aws_region }}
