@@ -10,6 +10,10 @@ inputs:
   deployment_tag:
     description: Github Action deployment tag
     required: true
+  desired_count:
+    description: Number of tasks running in ECS service
+    required: false
+    default: 2
 
   aws_access_key_id:
     description: AWS access key
@@ -79,7 +83,7 @@ runs:
       run: |
         aws ecs update-service \
           --task-definition "${{ steps.deploy-production-task-definition.outputs.latest-task-definition-arn }}" \
-          --desired-count 1 \
+          --desired-count ${{ inputs.desired_count }} \
           --cluster ${{ inputs.environment }} \
           --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
