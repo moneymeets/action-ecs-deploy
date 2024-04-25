@@ -13,12 +13,13 @@ python = "~3.12"
 
 click="*"
 boto3 = "*"
-moto = {extras = ["ecs"], version = "^5.0.1"}
 
 [tool.poetry.dev-dependencies]
 ruff = "*"
 pytest = "*"
 pytest-cov = "*"
+moto = {extras = ["ecs"], version = "*"}
+
 
 [tool.poetry.scripts]
 actions_helper = 'actions_helper.main:cli'
