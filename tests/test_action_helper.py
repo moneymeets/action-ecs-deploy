@@ -5,7 +5,7 @@ import boto3
 from click.testing import CliRunner
 from moto import mock_aws
 
-from actions_helper.main import NonSingleValueError, Tag, format_tags
+from actions_helper.commands.get_active_task_definition_by_tag import NonSingleValueError, Tag, format_tags
 from actions_helper.main import cmd_get_active_task_definition_arn_by_tag as command
 
 TEST_AWS_DEFAULT_REGION = "us-east-1"
