@@ -4,11 +4,28 @@ import boto3
 import click
 
 from actions_helper.commands.get_active_task_definition_by_tag import get_active_task_definition_arn_by_tag
+from actions_helper.commands.wait_for_service_stability import wait_for_service_stability
 
 
 @click.group()
 def cli():
     pass
+
+
+@cli.command(name="wait-for-service-stability")
+@click.option("--aws-region", default=os.environ.get("AWS_DEFAULT_REGION"), type=str)
+@click.option("--cluster", type=str)
+@click.option("--service", type=str)
+def cmd_wait_for_service_stability(
+    aws_region: str,
+    cluster: str,
+    service: str,
+):
+    wait_for_service_stability(
+        ecs_client=boto3.Session(region_name=aws_region).client("ecs"),
+        cluster=cluster,
+        service=service,
+    )
 
 
 @cli.command(

@@ -87,12 +87,12 @@ runs:
           --cluster ${{ inputs.environment }} \
           --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
-    # https://docs.aws.amazon.com/cli/latest/reference/ecs/wait/services-stable.html
-    - name: Await service stability
+    - name: Wait for service stability
       shell: bash
       id: check-service-stability
+      working-directory: ${{ github.action_path }}
       run: |
-        aws ecs wait services-stable \
+        poetry run actions_helper wait-for-service-stability \
           --cluster ${{ inputs.environment }} \
           --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
