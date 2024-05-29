@@ -59,6 +59,7 @@ runs:
       id: deploy-local-task-definition
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
       with:
+        working_directory: ${{ github.action_path }}
         application_id: ${{ inputs.ecr_repository }}-local-exec-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
         deployment_tag: ${{ inputs.deployment_tag }}
@@ -70,6 +71,7 @@ runs:
       id: deploy-production-task-definition
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
       with:
+        working_directory: ${{ github.action_path }}
         application_id: ${{ inputs.ecr_repository }}-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
         deployment_tag: ${{ inputs.deployment_tag }}

@@ -2,6 +2,9 @@ name: Create task definition revision
 description: Use image_uri to create new task definition revision, and deregister previous active task definition
 
 inputs:
+  working_directory:
+    description: Action working directory
+    required: true
   application_id:
     description: Application ID also the task definition name in this case
     required: true
@@ -38,12 +41,13 @@ runs:
     - name: Get latest active task definition revision created by Pulumi
       id: get-pulumi-task-definition-arn
       shell: bash
+      working-directory: ${{ inputs.working_directory }}
       env:
         APPLICATION_ID: ${{ inputs.application_id }}
         AWS_REGION: ${{ inputs.aws_region }}
       run: |
         TASK_DEFINITION_ARN=$(
-          poetry run --directory ${{ github.action_path }} actions_helper get-active-task-definition-arn-by-tag \
+          poetry run actions_helper get-active-task-definition-arn-by-tag \
             --application-id "$APPLICATION_ID" \
             --tags "created_by:Pulumi,Name:$APPLICATION_ID" \
             --aws-region "$AWS_REGION"
@@ -75,12 +79,13 @@ runs:
     - name: Get latest active task definition created by GitHub Actions deployment
       id: get-github-action-task-definition-arn
       shell: bash
+      working-directory: ${{ inputs.working_directory }}
       env:
         APPLICATION_ID: ${{ inputs.application_id }}
         DEPLOYMENT_TAG: ${{ inputs.deployment_tag }}
       run: |
         TASK_DEFINITION_ARN=$(
-          poetry run --directory ${{ github.action_path }} actions_helper get-active-task-definition-arn-by-tag \
+          poetry run actions_helper get-active-task-definition-arn-by-tag \
             --application-id "$APPLICATION_ID" \
             --tags "created_by:$DEPLOYMENT_TAG,Name:$APPLICATION_ID" \
             --aws-region "$AWS_REGION" \
