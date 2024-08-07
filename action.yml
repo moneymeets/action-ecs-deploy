@@ -41,12 +41,6 @@ runs:
     - id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
     - name: Setup Python + Poetry
       uses: moneymeets/action-setup-python-poetry@master
       with:
@@ -55,23 +49,11 @@ runs:
         # ToDo: Re-enable cache when https://github.com/actions/setup-python/issues/361 is fixed
         poetry_cache_enabled: 'false'
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
     - id: get-image-uri
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@feature/test-deploy-md-7480
       with:
         ecr_repository: ${{ inputs.ecr_repository }}
         aws_region: ${{ inputs.aws_region }}
-
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
 
     - name: Render and deploy local-exec task definition to Amazon ECS
       id: deploy-local-task-definition
@@ -85,12 +67,6 @@ runs:
         aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
         aws_region: ${{ inputs.aws_region }}
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
     - name: Render and deploy task definition to Amazon ECS
       id: deploy-production-task-definition
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
@@ -103,32 +79,20 @@ runs:
         aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
         aws_region: ${{ inputs.aws_region }}
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
-    - name: Render and deploy task definition to Amazon ECS
-      id: deploy-migration-task-definition
+    - name: Render and deploy preflight task definition to Amazon ECS
+      id: deploy-preflight-task-definition
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/create-task-definition@master
       with:
         working_directory: ${{ github.action_path }}
-        application_id: ${{ inputs.ecr_repository }}-migrations-${{ inputs.environment }}
+        application_id: ${{ inputs.ecr_repository }}-preflight-${{ inputs.environment }}
         image_uri: ${{ steps.get-image-uri.outputs.image-uri }}
         deployment_tag: ${{ inputs.deployment_tag }}
         aws_access_key_id: ${{ inputs.aws_access_key_id }}
         aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
         aws_region: ${{ inputs.aws_region }}
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
-    - name: Run migrations
-      id: run-migrations
+    - name: Run preflight
+      id: run-preflight
       shell: bash
       run: |
         NETWORK_CONFIG=$(
@@ -141,70 +105,51 @@ runs:
         SUBNET=$(echo $NETWORK_CONFIG | jq -r '.subnets')
         SECURITY_GROUPS=$(echo $NETWORK_CONFIG | jq -r '.securityGroups')
 
-        MIGRATION_TASK_ARN=$(
+        PREFLIGHT_TASK_ARN=$(
           aws ecs run-task \
             --cluster ${{ inputs.environment }} \
             --count 1 \
             --launch-type "FARGATE" \
             --network-configuration "{ \"awsvpcConfiguration\": { \"subnets\": $SUBNET, \"securityGroups\": $SECURITY_GROUPS, \"assignPublicIp\": \"DISABLED\" } }" \
-            --task-definition "${{ steps.deploy-migration-task-definition.outputs.latest-task-definition-arn }}" \
+            --task-definition "${{ steps.deploy-preflight-task-definition.outputs.latest-task-definition-arn }}" \
             | jq -r '.tasks[0] | .taskArn'
         )
 
-        echo $MIGRATION_TASK_ARN
-        echo "migration-task-arn=$MIGRATION_TASK_ARN" >> $GITHUB_OUTPUT
+        echo "preflight-task-arn=$PREFLIGHT_TASK_ARN" >> $GITHUB_OUTPUT
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
-
-    - name: Wait for migrations to finish
+    - name: Wait for preflight to finish
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
         poetry run actions_helper wait-for-task-stopped \
           --cluster ${{ inputs.environment }} \
-          --task "${{ steps.run-migrations.outputs.migration-task-arn }}"
+          --task "${{ steps.run-preflight.outputs.preflight-task-arn }}"
 
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;    
-
-    - name: Determine migrations task state
+    - name: Determine preflight task state
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
-        RESPONSE=$(
+        PREFLIGHT_TASK_STATE=$(
            aws ecs describe-tasks \
               --cluster ${{ inputs.environment }} \
-              --tasks "${{ steps.run-migrations.outputs.migration-task-arn }}"
+              --tasks "${{ steps.run-preflight.outputs.preflight-task-arn }}"
          )
         
-        STOPPED_MIGRATION_CONTAINER=$(echo $RESPONSE | jq -r '.tasks[0].containers[0]')
-        EXIT_CODE=$(echo $STOPPED_MIGRATION_CONTAINER | jq -r '.exitCode')
-        REASON=$(echo $STOPPED_MIGRATION_CONTAINER | jq -r '.reason')
+        STOPPED_PREFLIGHT_CONTAINER=$(echo $PREFLIGHT_TASK_STATE | jq -r '.tasks[0].containers[0]')
+        EXIT_CODE=$(echo $STOPPED_PREFLIGHT_CONTAINER | jq -r '.exitCode')
+        REASON=$(echo $STOPPED_PREFLIGHT_CONTAINER | jq -r '.reason')
           
         if [ "$EXIT_CODE" -ne 0 ]; then
-            echo "Error: Migration container failed with a non zero exit code - $EXIT_CODE";
+            echo "Error: Preflight container failed with a non zero exit code - $EXIT_CODE";
             echo "Reason: $REASON";
             exit 1;
         fi
-
-    - name: Time Taken
-      shell: bash
-      run: |
-        current_date_time="`date "+%Y-%m-%d %H:%M:%S"`";
-        echo $current_date_time;
 
     # Service is managed by Pulumi, only desired count and task definition should be updated here
     - name: Update service
       shell: bash
       run: |
-        time aws ecs update-service \
+        aws ecs update-service \
           --task-definition "${{ steps.deploy-production-task-definition.outputs.latest-task-definition-arn }}" \
           --desired-count ${{ inputs.desired_count }} \
           --cluster ${{ inputs.environment }} \
@@ -215,7 +160,7 @@ runs:
       id: check-service-stability
       working-directory: ${{ github.action_path }}
       run: |
-        time poetry run actions_helper wait-for-service-stability \
+        poetry run actions_helper wait-for-service-stability \
           --cluster ${{ inputs.environment }} \
           --service ${{ inputs.ecr_repository }}-${{ inputs.environment }}
 
@@ -239,13 +184,13 @@ runs:
               if [ ! -z "$PREVIOUS_PRODUCTION_TASK_DEFINITION" ]; then   
                 echo "TASK_DEFINITION_PRODUCTION=$PREVIOUS_PRODUCTION_TASK_DEFINITION" >> $GITHUB_ENV
                 echo "TASK_DEFINITION_LOCAL=${{ steps.deploy-local-task-definition.outputs.previous-task-definition-arn }}" >> $GITHUB_ENV
-                echo "TASK_DEFINITION_MIGRATION=${{ steps.deploy-migration-task-definition.outputs.previous-task-definition-arn }}" >> $GITHUB_ENV
+                echo "TASK_DEFINITION_PREFLIGHT=${{ steps.deploy-preflight-task-definition.outputs.previous-task-definition-arn }}" >> $GITHUB_ENV
                 echo "fail-pipeline=false" >> $GITHUB_OUTPUT
               fi
         else
             echo "TASK_DEFINITION_PRODUCTION=$LATEST_PRODUCTION_TASK_DEFINITION" >> $GITHUB_ENV
             echo "TASK_DEFINITION_LOCAL=${{ steps.deploy-local-task-definition.outputs.latest-task-definition-arn }}" >> $GITHUB_ENV
-            echo "TASK_DEFINITION_MIGRATION=${{ steps.deploy-migration-task-definition.outputs.latest-task-definition-arn }}" >> $GITHUB_ENV
+            echo "TASK_DEFINITION_PREFLIGHT=${{ steps.deploy-preflight-task-definition.outputs.latest-task-definition-arn }}" >> $GITHUB_ENV
             echo "fail-pipeline=true" >> $GITHUB_OUTPUT
         fi
 
@@ -259,10 +204,10 @@ runs:
       shell: bash
       run: aws ecs deregister-task-definition --task-definition "$TASK_DEFINITION_LOCAL"
 
-    - name: Deregister migration definition
-      if: ${{ always() && steps.deploy-migration-task-definition.outcome == 'success' && env.TASK_DEFINITION_MIGRATION != '' }}
+    - name: Deregister preflight task definition
+      if: ${{ always() && steps.deploy-preflight-task-definition.outcome == 'success' && env.TASK_DEFINITION_PREFLIGHT != '' }}
       shell: bash
-      run: aws ecs deregister-task-definition --task-definition "$TASK_DEFINITION_MIGRATION"
+      run: aws ecs deregister-task-definition --task-definition "$TASK_DEFINITION_PREFLIGHT"
 
     - name: Fail pipeline
       if: ${{ always() && steps.determine-task-definitions-to-deregister.outputs.fail-pipeline == 'true'  }}
