@@ -23,7 +23,7 @@ runs:
       shell: bash
       id: get-image-uri
       run: |
-        imageTag=master-3ea7f877191b2b8e61f7da3cd56ba668309c5b6f
+        imageTag=master-1ff620342f72a076fba91a2a269f4317db210dab
         IMAGE_TAGS=$(
           aws ecr describe-images \
           --repository-name ${{ inputs.ecr_repository }} \
