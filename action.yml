@@ -18,6 +18,10 @@ inputs:
     description: Determines whether the preflight step should be triggered
     required: false
     default: true
+  allow_feature_branch_deployment:
+    description: Allow deployment from feature branch
+    required: false
+    default: false
 
   aws_access_key_id:
     description: AWS access key
@@ -56,6 +60,7 @@ runs:
     - id: get-image-uri
       uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@master
       with:
+        allow_feature_branch_deployment: ${{ inputs.allow_feature_branch_deployment }}
         ecr_repository: ${{ inputs.ecr_repository }}
         aws_region: ${{ inputs.aws_region }}
 

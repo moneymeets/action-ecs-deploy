@@ -8,6 +8,9 @@ inputs:
   aws_region:
     description: AWS region
     required: true
+  allow_feature_branch_deployment:
+    description: Allow deployment from features
+    required: false
 
 outputs:
   image-uri:
@@ -23,7 +26,11 @@ runs:
       shell: bash
       id: get-image-uri
       run: |
-        imageTag=master-${{ github.sha }}
+        if [[ "${{ inputs.allow_feature_branch_deployment }}" == "false" ]]; then
+          imageTag=master-${{ github.sha }}
+        else
+          imageTag=$(echo ${{ github.ref_name }} | awk '{print tolower($0)}' | sed -e 's|/|-|g')
+        fi
         IMAGE_TAGS=$(
           aws ecr describe-images \
           --repository-name ${{ inputs.ecr_repository }} \
