@@ -58,7 +58,7 @@ runs:
         poetry_cache_enabled: 'false'
 
     - id: get-image-uri
-      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@master
+      uses: moneymeets/action-ecs-deploy/custom-deploy-steps/get-image-uri@feature/WIP-allow-deploy-from-feature-branch
       with:
         allow_feature_branch_deployment: ${{ inputs.allow_feature_branch_deployment }}
         ecr_repository: ${{ inputs.ecr_repository }}
