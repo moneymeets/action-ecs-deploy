@@ -10,14 +10,13 @@ inputs:
   deployment_tag:
     description: Github Action deployment tag
     required: true
+  run_preflight:
+    description: Determines whether the preflight step should be triggered
+    required: true
   desired_count:
     description: Number of tasks running in ECS service
     required: false
     default: 2
-  run_preflight:
-    description: Determines whether the preflight step should be triggered
-    required: false
-    default: true
 
   aws_access_key_id:
     description: AWS access key
