@@ -93,7 +93,7 @@ runs:
         )
         echo "previous-task-definition-arn=${TASK_DEFINITION_ARN}" >> $GITHUB_OUTPUT
 
-    - uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+    - uses: aws-actions/amazon-ecs-deploy-task-definition@v2
       id: deploy-task-definition
       with:
         task-definition: task-definition.json
