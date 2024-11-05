@@ -18,8 +18,6 @@ boto3 = "*"
 ruff = "*"
 pytest = "*"
 pytest-cov = "*"
-moto = {extras = ["ecs"], version = "*"}
-
 
 [tool.poetry.scripts]
 actions_helper = 'actions_helper.main:cli'
