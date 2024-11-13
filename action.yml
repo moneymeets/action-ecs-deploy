@@ -156,7 +156,7 @@ runs:
       run: aws ecs deregister-task-definition --task-definition "$TASK_DEFINITION_LOCAL"
 
     - name: Deregister preflight task definition
-      if: ${{ always() && steps.deploy-preflight-task-definition-and-run-task.outcome == 'success' && env.TASK_DEFINITION_PREFLIGHT != '' }}
+      if: ${{ always() && env.TASK_DEFINITION_PREFLIGHT != '' }}
       shell: bash
       run: aws ecs deregister-task-definition --task-definition "$TASK_DEFINITION_PREFLIGHT"
 
