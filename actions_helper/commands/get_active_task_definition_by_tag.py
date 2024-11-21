@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import click
 from botocore.client import BaseClient
 
 
@@ -52,21 +53,19 @@ def get_active_task_definition_arn_by_tag(
     )
 
     # Allows for initial deployment of task definition.
-    # Requires that the only other active task definition is to be created by Pulumi,
+    # Requires that the only other active task definition was created by Pulumi,
     # in order to prevent multiple deployed task definitions with different tags.
-    if (
-        allow_initial_deployment
-        and len(active_task_definition_arns) == 1
-        and {"key": "created_by", "value": "Pulumi"}
-        in ecs_client.describe_task_definition(
+    if allow_initial_deployment and len(active_task_definition_arns) == 1:
+        if {"key": "created_by", "value": "Pulumi"} not in ecs_client.describe_task_definition(
             taskDefinition=active_task_definition_arns[0],
             include=["TAGS"],
-        )["tags"]
-    ):
+        )["tags"]:
+            raise ValueError("Expected initial deployment to only have Pulumi task definition")
         return ""
 
     try:
         (task_definition,) = tagged_active_task_definitions
+        click.echo(task_definition)
         return task_definition
     except ValueError as e:
         raise NonSingleValueError(
