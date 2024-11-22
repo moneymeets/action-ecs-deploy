@@ -15,12 +15,10 @@ inputs:
     required: true
   desired_count:
     description: Number of tasks running in ECS service
-    required: false
-    default: 2
+    required: true
   allow_feature_branch_deployment:
     description: Allow deployment from feature branch
-    required: false
-
+    required: true
   aws_access_key_id:
     description: AWS access key
     required: true
