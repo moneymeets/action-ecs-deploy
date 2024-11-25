@@ -11,6 +11,7 @@ def deregister_task_definition(
     ecs_client: BaseClient,
     cluster: str,
     service: str,
+    run_preflight: bool,
     production_task_definition_output: Optional[CreateTaskDefinitionOutput],
     local_task_definition_output: Optional[CreateTaskDefinitionOutput],
     preflight_task_definition_output: Optional[CreateTaskDefinitionOutput],
@@ -28,7 +29,13 @@ def deregister_task_definition(
 
     fail_pipeline = True
     if (
-        all((production_task_definition_output, local_task_definition_output, preflight_task_definition_output))
+        all(
+            (
+                production_task_definition_output,
+                local_task_definition_output,
+                *((preflight_task_definition_output,) if run_preflight else ()),
+            ),
+        )
         and primary_deployment_definition_arn == production_task_definition_output.latest_task_definition_arn
     ):
         # Do not deregister task definition for initial deployment
