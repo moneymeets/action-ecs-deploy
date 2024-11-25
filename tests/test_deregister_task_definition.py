@@ -34,6 +34,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                 production_task_definition_output=None,
                 preflight_task_definition_output=None,
                 local_task_definition_output=None,
+                run_preflight=True,
             )
             ecs_describe_services_patch.assert_called()
             ecs_deregister_patch.assert_not_called()
@@ -60,6 +61,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                 ),
                 production_task_definition_output=None,
                 preflight_task_definition_output=None,
+                run_preflight=True,
             )
             ecs_describe_services_patch.assert_called()
             ecs_deregister_patch.assert_called_once_with(local_exec_task_definition_1)
@@ -85,6 +87,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                 ),
                 production_task_definition_output=None,
                 preflight_task_definition_output=None,
+                run_preflight=True,
             )
             ecs_describe_services_patch.assert_called()
             ecs_deregister_patch.assert_called_once_with(local_exec_task_definition_2)
@@ -117,6 +120,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                     previous_task_definition_arn="",
                     latest_task_definition_arn=preflight_task_definition_1,
                 ),
+                run_preflight=True,
             )
 
             ecs_describe_services_patch.assert_called()
@@ -150,6 +154,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                     previous_task_definition_arn=preflight_task_definition_1,
                     latest_task_definition_arn=preflight_task_definition_2,
                 ),
+                run_preflight=True,
             )
 
             ecs_describe_services_patch.assert_called()
@@ -157,6 +162,42 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                 (
                     call(taskDefinition=local_task_definition_1),
                     call(taskDefinition=preflight_task_definition_1),
+                    call(taskDefinition=production_task_definition_1),
+                ),
+            )
+
+    def test_deregister_task_definition_successful_deploy_without_preflight(self):
+        local_task_definition_1 = production_task_definition_1 = Mock()
+        local_task_definition_2 = production_task_definition_2 = Mock()
+        with (
+            self.subTest("Successful deployment"),
+            patch.object(
+                self.ecs_client,
+                attribute="describe_services",
+                return_value=self.describe_service_return_value(status="PRIMARY", arn=production_task_definition_2),
+            ) as ecs_describe_services_patch,
+            patch.object(self.ecs_client, attribute="deregister_task_definition") as ecs_deregister_patch,
+        ):
+            deregister_task_definition(
+                ecs_client=self.ecs_client,
+                service="",
+                cluster="",
+                local_task_definition_output=CreateTaskDefinitionOutput(
+                    previous_task_definition_arn=local_task_definition_1,
+                    latest_task_definition_arn=local_task_definition_2,
+                ),
+                production_task_definition_output=CreateTaskDefinitionOutput(
+                    previous_task_definition_arn=production_task_definition_1,
+                    latest_task_definition_arn=production_task_definition_2,
+                ),
+                preflight_task_definition_output=None,
+                run_preflight=False,
+            )
+
+            ecs_describe_services_patch.assert_called()
+            ecs_deregister_patch.assert_has_calls(
+                (
+                    call(taskDefinition=local_task_definition_1),
                     call(taskDefinition=production_task_definition_1),
                 ),
             )
@@ -191,6 +232,7 @@ class DeregisterTaskDefinitionTestCase(unittest.TestCase):
                     previous_task_definition_arn=preflight_task_definition_1,
                     latest_task_definition_arn=preflight_task_definition_2,
                 ),
+                run_preflight=True,
             )
 
             ecs_describe_services_patch.assert_called()

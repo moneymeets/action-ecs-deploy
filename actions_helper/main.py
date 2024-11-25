@@ -117,6 +117,7 @@ def cmd_ecs_deploy(
             production_task_definition_output=production_task_definition,
             local_task_definition_output=local_task_definition,
             preflight_task_definition_output=preflight_task_definition,
+            run_preflight=run_preflight,
         )
 
 
