@@ -25,12 +25,12 @@ def cli():
     short_help="Deploy production image to AWS ECS",
 )
 @click.option("--environment", type=click.Choice(Environment))
-@click.option("--allow-feature-branch-deployment", type=bool, default=False)
+@click.option("--allow-feature-branch-deployment", type=bool)
 @click.option("--ecr-repository", envvar="ECR_REPOSITORY", type=str)
 @click.option("--deployment-tag", envvar="DEPLOYMENT_TAG", type=str)
 @click.option("--image-tag", envvar="IMAGE_TAG", type=str)
 @click.option("--run-preflight", envvar="RUN_PREFLIGHT", type=bool)
-@click.option("--desired-count", default=2, type=int)
+@click.option("--desired-count", type=int)
 @click.option("--aws-region", envvar="AWS_DEFAULT_REGION", type=str)
 def cmd_ecs_deploy(
     environment: Environment,
