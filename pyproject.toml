@@ -14,7 +14,7 @@ python = "~3.12"
 click="*"
 boto3 = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 ruff = "*"
 pytest = "*"
 pytest-cov = "*"
