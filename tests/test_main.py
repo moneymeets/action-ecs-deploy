@@ -40,7 +40,7 @@ class CmdECSDeployTestCase(unittest.TestCase):
     def test_allow_feature_branch_wrong_environment(self, *args, **kwargs):
         result = self.runner.invoke(
             cmd_ecs_deploy,
-            args=f"{self.make_args(self.pulumi_command_args | {"--environment": "live"})}",
+            args=f"{self.make_args(self.pulumi_command_args | {'--environment': 'live'})}",
         )
         self.assertIsInstance(result.exception, RuntimeError)
         self.assertEqual(result.exit_code, 1)
