@@ -24,7 +24,7 @@ def cli():
     name="ecs-deploy",
     short_help="Deploy production image to AWS ECS",
 )
-@click.option("--environment", type=click.Choice(Environment))
+@click.option("--environment", type=click.Choice(Environment, case_sensitive=False))
 @click.option("--allow-feature-branch-deployment", type=bool)
 @click.option("--ecr-repository", envvar="ECR_REPOSITORY", type=str)
 @click.option("--deployment-tag", envvar="DEPLOYMENT_TAG", type=str)
