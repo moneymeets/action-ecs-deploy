@@ -1,16 +1,19 @@
-[tool.poetry]
+[project]
 name = "action-ecs-deploy"
 version = "0.1.0"
 description = "AWS ECS Deploy"
-authors = ["moneymeets GmbH <service@moneymeets.com>"]
+authors = [{ name = "moneymeets", email = "service@moneymeets.com" }]
+requires-python = "~=3.14.0"
 
+[tool.poetry]
 packages = [
     { include = "actions_helper" }
 ]
 
-[tool.poetry.dependencies]
-python = "~3.12"
+[project.scripts]
+actions_helper = 'actions_helper.main:cli'
 
+[tool.poetry.dependencies]
 click="*"
 boto3 = "*"
 
@@ -18,9 +21,6 @@ boto3 = "*"
 ruff = "*"
 pytest = "*"
 pytest-cov = "*"
-
-[tool.poetry.scripts]
-actions_helper = 'actions_helper.main:cli'
 
 [tool.coverage.run]
 branch = true
